@@ -1,3 +1,5 @@
+from ConvAlphaBin import conv_bin, nib_vnoc
+#from Extract_ConstantesDES import recupConstantesDES
 
 def get_dict_from_string(source):
     result = dict()
@@ -27,7 +29,7 @@ def get_binary_string_from_file(fileName):
                 bytes_list += c
     binary_msg = ""
     for b in bytes_list:
-        print(bin(b), end=" ")
+        #print(bin(b), end=" ")
         size = len(bin(b)[2:])
         while size < 8:
             binary_msg += "0"
@@ -70,6 +72,13 @@ def apply_matrix(source, matrixx):
         result += source[int(matrixx[i])-1]
     return(result)
 
+def remove_matrix(source, matrixx):
+    my_dict = dict()
+    for i in range(len(matrixx)):
+        my_dict[int(matrixx[i])-1] = source[i]
+    result = dict_to_string(my_dict)
+    return(result)
+
 def apply_xor(source, K):
     result = ""
     for i in range(len(source)):
@@ -83,7 +92,7 @@ def C_DES(M):
     Mx = binary_string_to_blocks(M)
     new_M = ""
 
-    for k in range(len(Mx)):
+    for k in range(1):#len(Mx)):
         PM1 = apply_matrix(Mx[k], get_dict_from_string(string_PI))
         G = dict_to_string(PM1)[:32]
         D = dict_to_string(PM1)[32:]
@@ -116,6 +125,47 @@ def C_DES(M):
             D = apply_xor(res, G)
             G = save_D
         new_M += apply_matrix(G + D, get_dict_from_string(string_PI_inverse))
+    return(new_M)
+
+def D_DES(M):
+    Mx = binary_string_to_blocks(M)
+    #print(Mx)
+    new_M = ""
+
+    for k in range(len(Mx)):
+        PM1 = apply_matrix(Mx[k], get_dict_from_string(string_PI))
+        G = dict_to_string(PM1)[:32]
+        D = dict_to_string(PM1)[32:]
+
+        for j in range(16):
+            E = apply_matrix(D, get_dict_from_string(string_E))
+            xorE = apply_xor(E, Kx[len(Kx)-1-j])
+            blocks = list()
+            for i in range(int(len(xorE)/6)):
+                blocks.append(xorE[6*i:6*i+6])
+
+            for i in range(8):
+                line = int('0b' + blocks[i][0] + blocks[i][5], 2)
+                column = int('0b' + blocks[i][1:5], 2)
+
+                S = get_matrix_from_string(Sx[i])
+                short_binary_string = bin(int(S[line][column]))[2:]
+                new_block = ""
+                rest = 4 - len(short_binary_string)
+                while rest != 0:
+                    new_block += "0"
+                    rest -= 1
+                new_block += short_binary_string
+                blocks[i] = new_block
+            blocks_string = ""
+            for i in blocks:
+                blocks_string += i
+            res = apply_matrix(blocks_string, get_dict_from_string(string_P))
+            save_D = D
+            D = apply_xor(res, G)
+            G = save_D
+        new_M += apply_matrix(G + D, get_dict_from_string(string_PI_inverse))
+
     return(new_M)
 
 string_PI = "58 50 42 34 26 18 10 2 60 52 44 36 28 20 12 4 62 54 46 38 30 22 14 6 64 56 48 40 32 24 16 8 57 49 41 33 25 17 9 1 59 51 43 35 27 19 11 3 61 53 45 37 29 21 13 5 63 55 47 39 31 23 15 7"
@@ -156,5 +206,83 @@ for i in range(16):
     GD = G + D
     Kx.append(apply_matrix(GD, CP2))
 
-M = "1101110010111011110001001101010111100110111101111100001000110010100111010010101101101011111000110011101011011111"
-print(C_DES(M))
+#M = "1101110010111011110001001101010111100110111101111100001000110010100111010010101101101011111000110011101011011111"
+#print(C_DES(M))
+#check_dif(C_DES(M), "10001000001101101010000100010011110010110110000010010100100100000010011101110000010110100010000000001101000100011100011011000100")
+#check_dif(nib_vnoc(C_DES(M)), "iDahEètglJAncFogDRHGxA")
+#check_dif(conv_bin("iDahEètglJAncFogDRHGxA"), C_DES(M)+"0000")
+
+
+"""res1 = dict_to_string(binary_string_to_blocks("1000100000110110101000010001001111001011011000001001010010010000"))#"Messages/Chiffrement_DES_de_1.txt")))
+data = ""
+with open("Messages/Chiffrement_DES_de_1.txt", "r") as f:
+    data = f.read()
+##########
+#data = "0101111001011011010100100111111101010001000110101011110010010001"
+#########
+res2 = conv_bin("iDahEètglJA")
+print("\n", res1, res2)
+print(nib_vnoc("1000100000110110101000010001001111001011011000001001010010010000"))
+#check_dif(res1, res2)"""
+
+base = "!LvE.eb!wjI"
+check_dif(nib_vnoc(conv_bin(base)), base)
+check_dif(conv_bin(base), "1101110010111011110001001101010111100110111101111100001000110010" +"00")
+res = C_DES(conv_bin(base))
+#print(res)
+check_dif(res, "1000100000110110101000010001001111001011011000001001010010010000")
+check_dif(nib_vnoc(res), "iDahEètglJA")
+
+print(D_DES(res))
+print("1101110010111011110001001101010111100110111101111100001000110010")
+
+PM_I = "0111110110101011001111010010101001111111101100100000001111110010"
+expected = "1101110010111011110001001101010111100110111101111100001000110010"
+
+res2 = remove_matrix(PM_I, get_dict_from_string(string_PI))
+check_dif(res2, expected)
+
+
+
+
+
+
+
+PM_I = "1000100000110110101000010001001111001011011000001001010010010000"
+M = remove_matrix(PM_I, get_dict_from_string(string_PI_inverse))
+check_dif(M, "0011000011001010010000100001110011010101001001100001000100011010")
+G = dict_to_string(M)[:32]
+D = dict_to_string(M)[32:]
+check_dif(G, "00110000110010100100001000011100")
+check_dif(D, "11010101001001100001000100011010")
+
+goal_G = "01100111100101000101100001000001"
+goal_D = "00110000110010100100001000011100"
+
+res = apply_xor(G, D)
+save_D = D
+D = G
+check_dif(D, goal_D)
+#print(res)
+#check_dif(G, goal_G)
+
+
+
+
+
+#res = remove_matrix(D, get_dict_from_string(string_P))
+#G = res
+#print(res)
+pre_G=     "01111111101100100000001111110010"
+pre_D=     "11011110111011001101000011001100"
+objectif_G="01111101101010110011110100101010"
+objectif_D="01111111101100100000001111110010"
+
+"""res = apply_xor(pre_G, pre_D)
+pre_D = pre_G
+#res = remove_matrix(D, get_dict_from_string(string_P))
+pre_G = res
+print(res)
+print("10100011010001111110110111100110")
+check_dif(pre_D, objectif_D)
+check_dif(pre_G, objectif_G)"""
