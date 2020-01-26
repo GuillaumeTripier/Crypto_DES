@@ -2,8 +2,8 @@ from ConvAlphaBin import conv_bin, nib_vnoc
 from MY_Extract_ConstantesDES import recupConstantesDES
 from utils import *
 
-fileID = "6" #Could be "1", "2", "3", "4", "5", "6"
-i_want_to_decrypt = True
+fileID = "6" #Could be "1", "2", "3", "4", "5", "6", "11", "22", "33", "44", "55", "66"
+i_want_to_decrypt = True #Cloud be True or False
 
 def C_DES(M, X, Kx):
     Mx = binary_string_to_blocks(M)
